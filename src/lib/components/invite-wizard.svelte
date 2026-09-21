@@ -101,7 +101,16 @@
 						{#each appRights as right (right.id)}
 							<div class="flex items-center justify-between gap-4 border-b py-3 last:border-0">
 								<div class="min-w-0">
-									<p class="text-sm font-medium">{right.label}</p>
+									<p class="flex items-center gap-1.5 text-sm font-medium">
+										{right.label}
+										{#if right.ready === false}
+											<span
+												class="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+											>
+												soon
+											</span>
+										{/if}
+									</p>
 									<p class="text-muted-foreground text-xs">{right.description}</p>
 								</div>
 								<Switch

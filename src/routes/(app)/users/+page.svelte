@@ -4,25 +4,33 @@
 	import Input from '$lib/components/ui/input.svelte';
 	import InviteWizard from '$lib/components/invite-wizard.svelte';
 	import Switch from '$lib/components/ui/switch.svelte';
-	import { appRights, users as seed, type User } from '$lib/data';
+	import { appRights, roleOf, users as stored, type User } from '$lib/data';
 	import Search from '@lucide/svelte/icons/search';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 
-	// A local copy: the switches have to move somewhere, and there is no back end
-	// behind this mockup.
-	let users = $state<User[]>(seed.map((user) => ({ ...user, apps: [...user.apps] })));
+	function clone(list: User[]) {
+		return list.map((user) => ({ ...user, apps: [...user.apps] }));
+	}
+
+	// Everything on this page is a draft until Save: the switches, and the people
+	// the wizard adds. Cancel restores the baseline, which is what Save last wrote.
+	let baseline = $state(clone(stored));
+	let draft = $state(clone(stored));
 	let query = $state('');
 	let inviting = $state(false);
-	let lastInvite = $state<string | null>(null);
+	let saved = $state(false);
+
+	const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(baseline));
+	const pendingInvites = $derived(draft.filter((user) => user.lastSeen === 'invited').length);
 
 	const filtered = $derived(
-		users.filter((user) => {
+		draft.filter((user) => {
 			const needle = query.trim().toLowerCase();
 			return (
 				!needle ||
 				user.name.toLowerCase().includes(needle) ||
 				user.email.toLowerCase().includes(needle) ||
-				user.role.toLowerCase().includes(needle)
+				roleOf(user).toLowerCase().includes(needle)
 			);
 		})
 	);
@@ -42,21 +50,27 @@
 	}
 
 	function invite(emails: string[], apps: string[]) {
-		// The invited people are shown straight away, pending, so the wizard has a
-		// visible effect.
-		users = [
-			...users,
+		draft = [
+			...draft,
 			...emails.map((email, index) => ({
 				id: `pending-${Date.now()}-${index}`,
 				name: email.split('@')[0].replace(/[._-]+/g, ' '),
 				email,
-				role: 'Member' as const,
 				lastSeen: 'invited',
 				apps: [...apps]
 			}))
 		];
+	}
 
-		lastInvite = `${emails.length} invitation${emails.length > 1 ? 's' : ''} sent.`;
+	function save() {
+		// Deliberately a no-op beyond the page: this mockup writes nothing back.
+		baseline = clone(draft);
+		saved = true;
+		setTimeout(() => (saved = false), 2500);
+	}
+
+	function cancel() {
+		draft = clone(baseline);
 	}
 </script>
 
@@ -67,19 +81,15 @@
 		<div>
 			<h1 class="text-2xl font-semibold tracking-tight">Users</h1>
 			<p class="text-muted-foreground mt-1 text-sm">
-				{users.length} members. Switch an application on to let someone start it.
+				{draft.length} members. Switch an application on to let someone start it.
 			</p>
 		</div>
 
-		<Button onclick={() => (inviting = true)}>
+		<Button variant="outline" onclick={() => (inviting = true)}>
 			<UserPlus class="size-4" />
 			Invite people
 		</Button>
 	</div>
-
-	{#if lastInvite}
-		<p class="bg-muted text-muted-foreground rounded-md px-3 py-2 text-sm">{lastInvite}</p>
-	{/if}
 
 	<div class="relative max-w-sm">
 		<Search
@@ -98,13 +108,25 @@
 					<th scope="col" class="px-4 py-3 text-left font-semibold">Role</th>
 					<th scope="col" class="px-4 py-3 text-left font-semibold">Last seen</th>
 					{#each appRights as right (right.id)}
-						<th scope="col" class="px-4 py-3 text-center font-semibold">{right.label}</th>
+						<th scope="col" class="px-4 py-3 text-center font-semibold">
+							<span class="inline-flex items-center gap-1.5">
+								{right.label}
+								{#if right.ready === false}
+									<span
+										class="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] normal-case"
+									>
+										soon
+									</span>
+								{/if}
+							</span>
+						</th>
 					{/each}
 				</tr>
 			</thead>
 
 			<tbody>
 				{#each filtered as user (user.id)}
+					{@const role = roleOf(user)}
 					<tr class="border-b last:border-0">
 						<td class="px-4 py-3">
 							<div class="flex items-center gap-3">
@@ -122,7 +144,7 @@
 						</td>
 
 						<td class="px-4 py-3">
-							<Badge variant={user.role === 'Member' ? 'muted' : 'secondary'}>{user.role}</Badge>
+							<Badge variant={role === 'Member' ? 'muted' : 'secondary'}>{role}</Badge>
 						</td>
 
 						<td class="text-muted-foreground px-4 py-3 whitespace-nowrap">{user.lastSeen}</td>
@@ -134,8 +156,8 @@
 										checked={user.apps.includes(right.id)}
 										onchange={() => toggle(user, right.id)}
 										aria-label="{right.label} for {user.name}"
-										disabled={user.role === 'Owner'}
-										class={user.role === 'Owner' ? 'cursor-not-allowed opacity-60' : ''}
+										disabled={user.owner}
+										class={user.owner ? 'cursor-not-allowed opacity-60' : ''}
 									/>
 								</div>
 							</td>
@@ -152,8 +174,23 @@
 		</table>
 	</div>
 
+	<div class="flex flex-wrap items-center gap-3">
+		<Button onclick={save} disabled={!dirty}>Save</Button>
+		<Button variant="outline" onclick={cancel} disabled={!dirty}>Cancel</Button>
+
+		{#if saved}
+			<span class="text-muted-foreground text-sm">Saved — in this mockup, nothing is stored.</span>
+		{:else if dirty}
+			<span class="text-muted-foreground text-sm">
+				Unsaved changes.{#if pendingInvites}
+					{' '}Invitations go out when you save.{/if}
+			</span>
+		{/if}
+	</div>
+
 	<p class="text-muted-foreground text-xs">
-		The owner keeps every application; those switches are locked.
+		The owner keeps every application; those switches are locked. Turning Organization on makes
+		someone an administrator.
 	</p>
 </div>
 

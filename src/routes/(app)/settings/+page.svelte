@@ -15,7 +15,6 @@
 	function fresh() {
 		return {
 			name: organization.name,
-			slug: organization.slug,
 			timezone: organization.timezone,
 			locale: organization.locale,
 			retentionDays: String(organization.retentionDays),
@@ -55,17 +54,9 @@
 				</p>
 			</div>
 
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="space-y-2">
-					<Label for="org-name">Organization name</Label>
-					<Input id="org-name" bind:value={form.name} />
-				</div>
-
-				<div class="space-y-2">
-					<Label for="org-slug">Identifier</Label>
-					<Input id="org-slug" bind:value={form.slug} />
-					<p class="text-muted-foreground text-xs">Used in URLs. Lower case, no spaces.</p>
-				</div>
+			<div class="max-w-sm space-y-2">
+				<Label for="org-name">Organization name</Label>
+				<Input id="org-name" bind:value={form.name} />
 			</div>
 		</Card>
 
@@ -126,7 +117,7 @@
 	</div>
 
 	<div class="flex max-w-3xl items-center gap-3">
-		<Button onclick={save} disabled={!dirty}>Save changes</Button>
+		<Button onclick={save} disabled={!dirty}>Save</Button>
 		<Button variant="outline" onclick={() => (form = fresh())} disabled={!dirty}>Cancel</Button>
 
 		{#if saved}

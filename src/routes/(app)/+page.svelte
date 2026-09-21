@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import Card from '$lib/components/ui/card.svelte';
-	import { appRights, organization, users } from '$lib/data';
+	import { appRights, organization, roleOf, users } from '$lib/data';
 	import Building from '@lucide/svelte/icons/building';
 	import Settings from '@lucide/svelte/icons/settings';
 	import Users from '@lucide/svelte/icons/users';
 
 	// Counts, not charts: four numbers and a per-application tally is all this
 	// screen has to say, and a bar chart of four bars would say it worse.
-	const admins = users.filter((user) => user.role !== 'Member').length;
+	const admins = users.filter((user) => roleOf(user) !== 'Member').length;
 
 	const perApp = appRights.map((right) => ({
 		...right,
