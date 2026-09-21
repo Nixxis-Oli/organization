@@ -85,8 +85,11 @@
 						{@const active =
 							page.url.pathname === `${base}${item.href}` ||
 							page.url.pathname === `${base}${item.href}/`}
+						<!-- Tapping the entry already being shown navigates nowhere, so the
+							 overlay's own afterNavigate never fires for it. -->
 						<a
 							href="{base}{item.href}"
+							onclick={() => sidebar.closeMobile()}
 							class="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors {active
 								? 'bg-primary text-primary-foreground font-medium'
 								: 'hover:bg-accent hover:text-accent-foreground'}"
