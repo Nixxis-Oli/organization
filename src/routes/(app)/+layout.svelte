@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { page } from '$app/state';
-	import { apps, currentOrganizationId, organizations, palettes, signOutUrl } from '$lib/apps';
+	import {
+		apps,
+		currentOrganizationId,
+		currentUser,
+		organizations,
+		palettes,
+		signOutUrl
+	} from '$lib/apps';
 	import { navSections } from '$lib/nav';
 	import { createSidebar, MAX_WIDTH, MIN_WIDTH } from '$lib/sidebar.svelte';
 	import { ToolbarActions } from '@nixxis-oli/ui';
@@ -164,7 +171,7 @@
 				{apps}
 				{palettes}
 				currentAppId="organization"
-				user={{ name: 'Olivier Lambert', email: 'o.lambert@nixxis.com' }}
+				user={currentUser}
 				{organizations}
 				{currentOrganizationId}
 				onSignOut={() => (location.href = signOutUrl)}
