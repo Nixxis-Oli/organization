@@ -5,6 +5,7 @@
 	import InviteWizard from '$lib/components/invite-wizard.svelte';
 	import Switch from '$lib/components/ui/switch.svelte';
 	import { appRights, roleOf, users as stored, type AppRight, type User } from '$lib/data';
+	import { toaster } from '$lib/toaster.svelte';
 	import { cn } from '$lib/utils';
 	import Search from '@lucide/svelte/icons/search';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
@@ -13,8 +14,8 @@
 		return list.map((user) => ({ ...user, apps: [...user.apps] }));
 	}
 
-	// Everything on this page is a draft until Save: the switches, and the people
-	// the wizard adds. Cancel restores the baseline, which is what Save last wrote.
+	// The switches are a draft until Save; Cancel restores the baseline, which is
+	// what Save last wrote. Invitations are NOT part of that draft - see invite().
 	let baseline = $state(clone(stored));
 	let draft = $state(clone(stored));
 	let query = $state('');
@@ -22,7 +23,6 @@
 	let saved = $state(false);
 
 	const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(baseline));
-	const pendingInvites = $derived(draft.filter((user) => user.lastSeen === 'invited').length);
 
 	const filtered = $derived(
 		draft.filter((user) => {
@@ -51,16 +51,27 @@
 	}
 
 	function invite(emails: string[], apps: string[]) {
-		draft = [
-			...draft,
-			...emails.map((email, index) => ({
-				id: `pending-${Date.now()}-${index}`,
-				name: email.split('@')[0].replace(/[._-]+/g, ' '),
-				email,
-				lastSeen: 'invited',
-				apps: [...apps]
-			}))
-		];
+		const invited: User[] = emails.map((email, index) => ({
+			id: `pending-${Date.now()}-${index}`,
+			name: email.split('@')[0].replace(/[._-]+/g, ' '),
+			email,
+			lastSeen: 'invited',
+			apps: [...apps]
+		}));
+
+		// The email leaves when the wizard sends it, so these people are not a
+		// pending change: they go into the baseline as well as the draft. That
+		// keeps Save disabled if nothing else was touched, and keeps Cancel from
+		// pretending it can call back a message that has already gone out.
+		draft = [...draft, ...invited];
+		baseline = [...baseline, ...clone(invited)];
+
+		toaster.show(
+			emails.length > 1
+				? `${emails.length} invitations sent`
+				: `Invitation sent to ${emails[0]}`,
+			'They pick their own password from the email.'
+		);
 	}
 
 	function save() {
@@ -245,10 +256,7 @@
 		{#if saved}
 			<span class="text-muted-foreground text-sm">Saved — in this mockup, nothing is stored.</span>
 		{:else if dirty}
-			<span class="text-muted-foreground text-sm">
-				Unsaved changes.{#if pendingInvites}
-					{' '}Invitations go out when you save.{/if}
-			</span>
+			<span class="text-muted-foreground text-sm">Unsaved changes.</span>
 		{/if}
 	</div>
 

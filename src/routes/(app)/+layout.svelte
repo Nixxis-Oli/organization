@@ -9,6 +9,7 @@
 		palettes,
 		signOutUrl
 	} from '$lib/apps';
+	import Toaster from '$lib/components/ui/toaster.svelte';
 	import { navSections } from '$lib/nav';
 	import { createSidebar, MAX_WIDTH, MIN_WIDTH } from '$lib/sidebar.svelte';
 	import { ToolbarActions } from '@nixxis-oli/ui';
@@ -182,3 +183,8 @@
 		{@render children()}
 	</div>
 </div>
+
+<!-- Outside the layout flow, so a message is never clipped by the sidebar or the
+	 sticky toolbar, and outside any page, so it survives the navigation that a
+	 confirmed action often triggers. -->
+<Toaster />
